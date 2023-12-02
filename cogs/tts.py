@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands
-from gtts import gTTS
+from edge_tts import Communicate
 import asyncio
 
 class TTSCommands(commands.Cog):
@@ -33,9 +33,7 @@ class TTSCommands(commands.Cog):
         else:
             voice_client = self.voice_clients[ctx.guild.id]
 
-        # TODO: replace with nicer TTS
-        tts = gTTS(text=text, lang='en')
-        tts.save("tts.mp3")
+        await Communicate(text, 'en-IE-EmilyNeural').save('tts.mp3')
 
         voice_client.play(discord.FFmpegPCMAudio("tts.mp3"))
 
