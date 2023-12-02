@@ -9,41 +9,43 @@ class TTSCommands(commands.Cog):
 
     voice_clients = {}
 
-    @commands.slash_command(name="join", description="join voice channel")
-    async def join(self, ctx):
-        # TODO: abstract into a function that can be used by both tts() and join()
-        # TODO: fix ClientException: Already connected to a voice channel
+    async def try_join(self, ctx):
+        if ctx.guild.id in self.voice_clients:
+            await ctx.respond("I'm already connected to a voice channel in this server.")
+            return False
 
         if ctx.author.voice is None:
            await ctx.respond("You must be in a voice channel to use this command.")
-           return
+           return False
 
         voice_client = await ctx.author.voice.channel.connect()
         self.voice_clients[voice_client.guild.id] = voice_client
-        await ctx.respond(f"joined {ctx.author.voice.channel.name}")
+        return True
+
+    @commands.slash_command(name="join", description="join voice channel")
+    async def join(self, ctx):
+        if (await self.try_join(ctx)):
+            await ctx.respond(f"joined {ctx.author.voice.channel.name}")
 
     @commands.slash_command(name="tts", description="Generate TTS audio from text and play it in a voice channel.")
     async def tts(self, ctx, text: str):
-        voice_client = None
+        # get current voice channel / join one that the user is in
+        if ctx.guild.id not in self.voice_clients and not await self.try_join(ctx):
+            return
+        voice_client = self.voice_clients[ctx.guild.id]
 
-        if ctx.guild.id not in self.voice_clients:
-            if ctx.author.voice is None:
-                await ctx.respond("You must be in a voice channel to use this command.")
-                return
-
-            voice_client = await ctx.author.voice.channel.connect()
-            self.voice_clients[voice_client.guild.id] = voice_client
-        else:
-            voice_client = self.voice_clients[ctx.guild.id]
-
+        # Generate audio from text
         await Communicate(text, 'en-IE-EmilyNeural').save('tts.mp3')
 
+        # Stop playback if already playing
+        if voice_client.is_playing():
+            voice_client.stop()
+
+        # Start speaking the TRUTH
         voice_client.play(discord.FFmpegPCMAudio("tts.mp3"))
 
+        # respond to command
         await ctx.respond(f"I say: \"{text}\"")
-
-        while voice_client.is_playing():
-            await asyncio.sleep(1)
 
     @commands.slash_command(name="leave", description="bot leave voice channel")
     async def leave(self, ctx):
