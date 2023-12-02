@@ -11,6 +11,9 @@ class TTSCommands(commands.Cog):
 
     @commands.slash_command(name="join", description="join voice channel")
     async def join(self, ctx):
+        # TODO: abstract into a function that can be used by both tts() and join()
+        # TODO: fix ClientException: Already connected to a voice channel
+
         if ctx.author.voice is None:
            await ctx.respond("You must be in a voice channel to use this command.")
            return
@@ -37,7 +40,7 @@ class TTSCommands(commands.Cog):
 
         voice_client.play(discord.FFmpegPCMAudio("tts.mp3"))
 
-        await ctx.respond("I speak!")
+        await ctx.respond(f"I say: \"{text}\"")
 
         while voice_client.is_playing():
             await asyncio.sleep(1)
@@ -46,7 +49,7 @@ class TTSCommands(commands.Cog):
     async def leave(self, ctx):
         await ctx.guild.voice_client.disconnect()
         self.voice_clients[ctx.guild.id] = None
-        await ctx.respond("ok")
+        await ctx.respond("ok bye")
 
 def setup(client):
     client.add_cog(TTSCommands(client))
